@@ -1,35 +1,55 @@
 
-name: Python CI Pipeline
+name: Advanced CI Pipeline
 
 on:
   push:
     branches: [main]
 
-  pull_request:
-    branches: [main]
-
 jobs:
 
-  test:
-    name: Run Python Tests
-
+  build:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
 
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install Dependencies
+      - name: Build Application
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m compileall -q .
 
-      - name: Run Unit Tests
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Tests
+        run: python -m unittest -v
+
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Package
         run: |
-          python -m unittest -v
+          mkdir -p dist
+          tar -czf dist/application.tar.gz \
+            app.py test_app.py
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-application
+          path: dist/application.tar.gz
